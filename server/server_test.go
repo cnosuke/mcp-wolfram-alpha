@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/cnosuke/mcp-greeting/config"
+	"github.com/cnosuke/mcp-wolfram-alpha/config"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"

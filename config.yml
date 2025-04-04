@@ -1,5 +1,5 @@
-log: 'path/to/mcp-greeting.log'
+log: 'path/to/mcp-wolfram-alpha.log'
 debug: false
 
 greeting:
-  default_message: "こんにちは！"
+  default_message: 'こんにちは！'

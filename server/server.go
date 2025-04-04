@@ -5,8 +5,8 @@ import (
 	"github.com/metoro-io/mcp-golang/transport/stdio"
 	"go.uber.org/zap"
 
-	"github.com/cnosuke/mcp-greeting/config"
-	"github.com/cnosuke/mcp-greeting/server/tools"
+	"github.com/cnosuke/mcp-wolfram-alpha/config"
+	"github.com/cnosuke/mcp-wolfram-alpha/server/tools"
 	"github.com/cockroachdb/errors"
 )
 

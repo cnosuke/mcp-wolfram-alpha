@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/cnosuke/mcp-greeting/config"
+	"github.com/cnosuke/mcp-wolfram-alpha/config"
 	"go.uber.org/zap"
 )
 

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cnosuke/mcp-greeting/config"
-	"github.com/cnosuke/mcp-greeting/logger"
-	"github.com/cnosuke/mcp-greeting/server"
+	"github.com/cnosuke/mcp-wolfram-alpha/config"
+	"github.com/cnosuke/mcp-wolfram-alpha/logger"
+	"github.com/cnosuke/mcp-wolfram-alpha/server"
 	"github.com/cockroachdb/errors"
 	"github.com/urfave/cli/v2"
 )
@@ -17,7 +17,7 @@ var (
 	Version  = "0.0.1"
 	Revision = "xxx"
 
-	Name  = "mcp-greeting"
+	Name  = "mcp-wolfram-alpha"
 	Usage = "A simple MCP server implementation for greetings"
 )
 
