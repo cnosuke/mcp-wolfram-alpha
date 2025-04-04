@@ -1,5 +1,8 @@
 log: 'path/to/mcp-wolfram-alpha.log'
 debug: false
 
-greeting:
-  default_message: 'こんにちは！'
+wolfram:
+  app_id: 'YOUR_WOLFRAM_ALPHA_APP_ID'  # Wolfram Alpha API ID
+  timeout: 30                          # API timeout in seconds
+  use_bearer: false                    # Use Bearer authentication
+  default_max_chars: 2000              # Default maximum character count

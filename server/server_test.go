@@ -9,42 +9,59 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// TestNewGreetingServer - Test initialization of GreetingServer
-func TestNewGreetingServer(t *testing.T) {
+// TestNewWolframServer - Test initialization of WolframServer with valid config
+func TestNewWolframServer(t *testing.T) {
 	// Set up test logger
 	logger := zaptest.NewLogger(t)
 	zap.ReplaceGlobals(logger)
 
-	// Test configuration
+	// Test configuration with valid AppID
 	cfg := &config.Config{}
-	cfg.Greeting.DefaultMessage = "Test greeting"
+	cfg.Wolfram.AppID = "test-app-id"
+	cfg.Wolfram.Timeout = 30
+	cfg.Wolfram.DefaultMaxChars = 2000
 
 	// Create server
-	server, err := NewGreetingServer(cfg)
+	server, err := NewWolframServer(cfg)
 
 	// Assertions
 	assert.NoError(t, err)
 	assert.NotNil(t, server)
-	assert.Equal(t, "Test greeting", server.DefaultMessage)
 }
 
-// TestSetupServerComponents - Test server setup logic
-func TestSetupServerComponents(t *testing.T) {
+// TestNewWolframServerMissingAppID - Test initialization with missing AppID
+func TestNewWolframServerMissingAppID(t *testing.T) {
 	// Set up test logger
 	logger := zaptest.NewLogger(t)
 	zap.ReplaceGlobals(logger)
 
-	// Test configuration
+	// Test configuration with missing AppID
 	cfg := &config.Config{}
-	cfg.Greeting.DefaultMessage = "Test greeting"
+	cfg.Wolfram.AppID = "" // Missing AppID
 
-	// Create and test server
-	greetingServer, err := NewGreetingServer(cfg)
-	assert.NoError(t, err)
-	assert.NotNil(t, greetingServer)
+	// Create server
+	server, err := NewWolframServer(cfg)
 
-	// Test greeting generation functionality
-	greeting, err := greetingServer.GenerateGreeting("Test User")
-	assert.NoError(t, err)
-	assert.Equal(t, "Test greeting Test User!", greeting)
+	// Assertions
+	assert.Error(t, err)
+	assert.Nil(t, server)
+	assert.Contains(t, err.Error(), "AppID is required")
+}
+
+// TestGetMaxChars - Test the getMaxChars function
+func TestGetMaxChars(t *testing.T) {
+	// Set up configuration
+	cfg := &config.Config{}
+	cfg.Wolfram.DefaultMaxChars = 2000
+
+	// Test with nil options
+	assert.Equal(t, 2000, getMaxChars(nil, cfg))
+
+	// Import QueryParams directly from wolframllm
+	// But for testing without actually calling the API
+	wolframOptions := &struct{ MaxChars int }{MaxChars: 0}
+	
+	// Since our options is not the real wolframllm.QueryParams,
+	// it will return the default value
+	assert.Equal(t, 2000, getMaxChars(wolframOptions, cfg))
 }

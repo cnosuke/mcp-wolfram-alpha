@@ -14,11 +14,11 @@ import (
 var (
 	// Version and Revision are replaced when building.
 	// To set specific version, edit Makefile.
-	Version  = "0.0.1"
-	Revision = "xxx"
+	Version  = "0.1.0"
+	Revision = "dev"
 
 	Name  = "mcp-wolfram-alpha"
-	Usage = "A simple MCP server implementation for greetings"
+	Usage = "MCP server for Wolfram Alpha API"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 		{
 			Name:    "server",
 			Aliases: []string{"s"},
-			Usage:   "A simple MCP server implementation for greetings",
+			Usage:   "Start the MCP Wolfram Alpha server",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    "config",
