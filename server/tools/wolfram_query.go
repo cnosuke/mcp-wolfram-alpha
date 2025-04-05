@@ -30,7 +30,12 @@ func RegisterWolframQueryTool(server *mcp.Server, wolframServer WolframQueryer) 
 
 	description := `Execute a Wolfram Alpha query to perform calculations or retrieve knowledge.
 This leverages the high-precision Wolfram Alpha API engine to handle numerical calculations and symbolic computations – tasks where LLMs might struggle or produce uncertain results on their own. This allows the LLM to avoid computational errors and focus on delivering reliable information to the user.
-For instance, it is effective not only for mathematical calculations like complex arithmetic operations, solving algebraic equations, and calculus, but also for referencing scientific knowledge and factual data such as physical constants, chemical properties, statistical data, and geographical information. Attempting these tasks internally within the LLM can lead to inefficient token consumption. Except for very simple calculations, when computation or accurate data retrieval is required, actively utilize this function to optimize token consumption and maximize the LLM's core capabilities.`
+For instance, it is effective not only for mathematical calculations like complex arithmetic operations, solving algebraic equations, and calculus, but also for referencing scientific knowledge and factual data such as physical constants, chemical properties, statistical data, and geographical information. Attempting these tasks internally within the LLM can lead to inefficient token consumption. Except for very simple calculations, when computation or accurate data retrieval is required, actively utilize this function to optimize token consumption and maximize the LLM's core capabilities.
+When requesting a calculation, a query should be structured for maximum reliability, preferably by embedding numerical values directly into the formula whenever possible.
+
+If variables are used for conciseness, the query should follow the format "compute <formula> where <single-char variable>=<value>, <single-char variable>=<value>, ...", using only single-character variable names and strongly avoiding characters with potentially specific meanings in scientific computing (like 'i', which can be misinterpreted as the imaginary unit).
+Variables should be a single character; more than two characters are error-prone.
+Example: "compute x^3+y^2+z where x=3, y=2, z=1"`
 
 	err := server.RegisterTool("wolfram_query", description,
 		func(args WolframQueryArgs) (*mcp.ToolResponse, error) {
