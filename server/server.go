@@ -1,8 +1,10 @@
 package server
 
 import (
-	mcp "github.com/metoro-io/mcp-golang"
-	"github.com/metoro-io/mcp-golang/transport/stdio"
+	"context"
+
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"go.uber.org/zap"
 
 	"github.com/cnosuke/mcp-wolfram-alpha/config"
@@ -11,11 +13,14 @@ import (
 )
 
 // Run - Execute the MCP server
-func Run(cfg *config.Config) error {
+func Run(cfg *config.Config, name string, version string, revision string) error {
 	zap.S().Infow("starting MCP Wolfram Alpha Server")
 
-	// Channel to prevent server from terminating
-	done := make(chan struct{})
+	// Format version string with revision if available
+	versionString := version
+	if revision != "" && revision != "xxx" {
+		versionString = versionString + " (" + revision + ")"
+	}
 
 	// Create Wolfram Alpha server
 	zap.S().Debugw("creating Wolfram Alpha server")
@@ -25,31 +30,43 @@ func Run(cfg *config.Config) error {
 		return err
 	}
 
-	// Create server with stdio transport
-	zap.S().Debugw("creating MCP server with stdio transport")
-	transport := stdio.NewStdioServerTransport()
-	server := mcp.NewServer(transport)
+	// Create custom hooks for error handling
+	hooks := &server.Hooks{}
+	hooks.AddOnError(func(ctx context.Context, id any, method mcp.MCPMethod, message any, err error) {
+		zap.S().Errorw("MCP error occurred",
+			"id", id,
+			"method", method,
+			"error", err,
+		)
+	})
+
+	// Create MCP server with server name and version
+	zap.S().Debugw("creating MCP server",
+		"name", name,
+		"version", versionString,
+	)
+	mcpServer := server.NewMCPServer(
+		name,
+		versionString,
+		server.WithHooks(hooks),
+	)
 
 	// Register all tools
 	zap.S().Debugw("registering tools")
-	if err := tools.RegisterAllTools(server, wolframServer); err != nil {
+	if err := tools.RegisterAllTools(mcpServer, wolframServer); err != nil {
 		zap.S().Errorw("failed to register tools", "error", err)
 		return err
 	}
 
-	// Start the server
+	// Start the server with stdio transport
 	zap.S().Infow("starting MCP server")
-	err = server.Serve()
+	err = server.ServeStdio(mcpServer)
 	if err != nil {
 		zap.S().Errorw("failed to start server", "error", err)
 		return errors.Wrap(err, "failed to start server")
 	}
 
-	zap.S().Infow("MCP Wolfram Alpha server started successfully")
-
-	// Block to prevent program termination
-	zap.S().Infow("waiting for requests...")
-	<-done
+	// ServeStdio will block until the server is terminated
 	zap.S().Infow("server shutting down")
 	return nil
 }

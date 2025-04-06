@@ -1,12 +1,12 @@
 package tools
 
 import (
-	mcp "github.com/metoro-io/mcp-golang"
+	"github.com/mark3labs/mcp-go/server"
 	"go.uber.org/zap"
 )
 
 // RegisterAllTools - Register all tools with the server
-func RegisterAllTools(mcpServer *mcp.Server, wolframServer WolframQueryer) error {
+func RegisterAllTools(mcpServer *server.MCPServer, wolframServer WolframQueryer) error {
 	zap.S().Infow("registering all tools")
 
 	// Register wolfram_query tool

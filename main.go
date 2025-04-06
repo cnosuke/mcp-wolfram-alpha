@@ -55,8 +55,8 @@ func main() {
 				}
 				defer logger.Sync()
 
-				// Start the server
-				return server.Run(cfg)
+				// Start the server with version information
+				return server.Run(cfg, Name, Version, Revision)
 			},
 		},
 	}

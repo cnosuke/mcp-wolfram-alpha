@@ -4,12 +4,12 @@ import (
 	"context"
 
 	wolframllm "github.com/cnosuke/go-wolfram-llm"
-	"github.com/cockroachdb/errors"
-	mcp "github.com/metoro-io/mcp-golang"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"go.uber.org/zap"
 )
 
-// WolframQueryArgs defines the arguments for the wolfram_query tool
+// WolframQueryArgs defines the arguments for the wolfram_query tool (kept for testing compatibility)
 type WolframQueryArgs struct {
 	Query        string `json:"query" jsonschema:"required,description=The Wolfram Alpha query to execute"`
 	MaxChars     int    `json:"max_chars" jsonschema:"description=Maximum characters in response (default: 2000)"`
@@ -25,7 +25,7 @@ type WolframQueryer interface {
 }
 
 // RegisterWolframQueryTool registers the wolfram_query tool with the MCP server
-func RegisterWolframQueryTool(server *mcp.Server, wolframServer WolframQueryer) error {
+func RegisterWolframQueryTool(mcpServer *server.MCPServer, wolframServer WolframQueryer) error {
 	zap.S().Infow("registering wolfram_query tool")
 
 	description := `Execute a Wolfram Alpha query to perform calculations or retrieve knowledge.
@@ -37,62 +37,112 @@ If variables are used for conciseness, the query should follow the format "compu
 Variables should be a single character; more than two characters are error-prone.
 Example: "compute x^3+y^2+z where x=3, y=2, z=1"`
 
-	err := server.RegisterTool("wolfram_query", description,
-		func(args WolframQueryArgs) (*mcp.ToolResponse, error) {
-			zap.S().Debugw("executing wolfram_query tool",
-				"query", args.Query,
-				"max_chars", args.MaxChars,
-				"units", args.Units,
-				"country_code", args.CountryCode,
-				"language_code", args.LanguageCode,
-				"show_steps", args.ShowSteps)
+	// Define the tool with parameters
+	tool := mcp.NewTool("wolfram_query",
+		mcp.WithDescription(description),
+		mcp.WithString("query",
+			mcp.Description("The Wolfram Alpha query to execute"),
+			mcp.Required(),
+		),
+		mcp.WithNumber("max_chars",
+			mcp.Description("Maximum characters in response (default: 2000)"),
+		),
+		mcp.WithString("units",
+			mcp.Description("Unit system to use (metric or nonmetric)"),
+			mcp.Enum("metric", "nonmetric"),
+		),
+		mcp.WithString("country_code",
+			mcp.Description("Country code for localization (e.g., 'JP')"),
+		),
+		mcp.WithString("language_code",
+			mcp.Description("Language code for localization (e.g., 'ja')"),
+		),
+		mcp.WithBoolean("show_steps",
+			mcp.Description("Request step-by-step solution for math problems"),
+		),
+	)
 
-			// Input validation
-			if args.Query == "" {
-				err := errors.New("query cannot be empty")
-				zap.S().Errorw("empty query provided", "error", err)
-				return nil, err
-			}
+	// Add the tool handler
+	mcpServer.AddTool(tool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// Extract parameters
+		var query string
+		var maxChars int
+		var units string
+		var countryCode string
+		var languageCode string
+		var showSteps bool
 
-			// Create context
-			ctx := context.Background()
+		// Get query parameter (required)
+		if queryVal, ok := request.Params.Arguments["query"].(string); ok {
+			query = queryVal
+		} else {
+			zap.S().Errorw("query parameter is required")
+			return mcp.NewToolResultError("query parameter is required"), nil
+		}
 
-			// Set query options
-			options := &wolframllm.QueryParams{
-				MaxChars:     args.MaxChars,
-				Units:        args.Units,
-				CountryCode:  args.CountryCode,
-				LanguageCode: args.LanguageCode,
-			}
+		// Get optional parameters
+		if maxCharsVal, ok := request.Params.Arguments["max_chars"].(float64); ok {
+			maxChars = int(maxCharsVal)
+		}
+		if unitsVal, ok := request.Params.Arguments["units"].(string); ok {
+			units = unitsVal
+		}
+		if countryCodeVal, ok := request.Params.Arguments["country_code"].(string); ok {
+			countryCode = countryCodeVal
+		}
+		if languageCodeVal, ok := request.Params.Arguments["language_code"].(string); ok {
+			languageCode = languageCodeVal
+		}
+		if showStepsVal, ok := request.Params.Arguments["show_steps"].(bool); ok {
+			showSteps = showStepsVal
+		}
 
-			// Handle step-by-step option
-			query := args.Query
-			if args.ShowSteps {
-				// Wolfram Alpha API has a special syntax for requesting steps
-				query = "show steps " + query
-			}
+		zap.S().Debugw("executing wolfram_query tool",
+			"query", query,
+			"max_chars", maxChars,
+			"units", units,
+			"country_code", countryCode,
+			"language_code", languageCode,
+			"show_steps", showSteps)
 
-			// Execute query
-			result, err := wolframServer.ExecuteQuery(ctx, query, options)
-			if err != nil {
-				zap.S().Errorw("failed to execute Wolfram Alpha query",
-					"query", query,
-					"error", err)
-				return nil, errors.Wrap(err, "failed to execute Wolfram Alpha query")
-			}
+		// Input validation
+		if query == "" {
+			errMsg := "query cannot be empty"
+			zap.S().Errorw(errMsg)
+			return mcp.NewToolResultError(errMsg), nil
+		}
 
-			zap.S().Debugw("wolfram_query executed successfully",
+		// Set query options
+		options := &wolframllm.QueryParams{
+			MaxChars:     maxChars,
+			Units:        units,
+			CountryCode:  countryCode,
+			LanguageCode: languageCode,
+		}
+
+		// Handle step-by-step option
+		if showSteps {
+			// Wolfram Alpha API has a special syntax for requesting steps
+			query = "show steps " + query
+		}
+
+		// Execute query
+		result, err := wolframServer.ExecuteQuery(ctx, query, options)
+		if err != nil {
+			errMsg := "failed to execute Wolfram Alpha query: " + err.Error()
+			zap.S().Errorw(errMsg,
 				"query", query,
-				"result_length", len(result))
+				"error", err)
+			return mcp.NewToolResultError(errMsg), nil
+		}
 
-			// Return response
-			return mcp.NewToolResponse(mcp.NewTextContent(result)), nil
-		})
+		zap.S().Debugw("wolfram_query executed successfully",
+			"query", query,
+			"result_length", len(result))
 
-	if err != nil {
-		zap.S().Errorw("failed to register wolfram_query tool", "error", err)
-		return errors.Wrap(err, "failed to register wolfram_query tool")
-	}
+		// Return response
+		return mcp.NewToolResultText(result), nil
+	})
 
 	return nil
 }
